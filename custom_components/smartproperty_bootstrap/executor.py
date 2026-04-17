@@ -126,6 +126,50 @@ async def _handle_automation(hass: HomeAssistant, payload: dict[str, Any]) -> Jo
     )
 
 
+async def _handle_resource_check(hass: HomeAssistant, payload: dict[str, Any]) -> JobResult:
+    """Verify a list of HACS frontend card repos are installed on this HA.
+
+    Payload:
+      ``required``: list of HACS repository identifiers (e.g. 'mushroom', 'bubble-card').
+
+    The check matches against Lovelace resource URLs — typically containing
+    the card's file name. Missing cards are returned so the admin flow can
+    ask the customer to install them via HACS before deploying the template.
+    """
+    required = payload.get("required") or []
+    if not isinstance(required, list):
+        return JobResult(False, "resource_check: 'required' must be a list.")
+
+    lovelace = hass.data.get("lovelace")
+    resources = getattr(lovelace, "resources", None) if lovelace else None
+    items_fn = getattr(resources, "async_items", None)
+    urls: list[str] = []
+    if callable(items_fn):
+        try:
+            for r in items_fn() or []:
+                if isinstance(r, dict) and isinstance(r.get("url"), str):
+                    urls.append(r["url"].lower())
+        except Exception:  # noqa: BLE001
+            pass
+
+    missing: list[str] = []
+    present: list[str] = []
+    for repo in required:
+        if not isinstance(repo, str):
+            continue
+        needle = repo.lower().replace("_", "-")
+        match = any(needle in url for url in urls)
+        (present if match else missing).append(repo)
+
+    if missing:
+        return JobResult(
+            False,
+            f"Missing frontend cards: {', '.join(missing)}",
+            {"missing": missing, "present": present},
+        )
+    return JobResult(True, "All required frontend cards are installed.", {"present": present})
+
+
 async def _handle_rollback(hass: HomeAssistant, payload: dict[str, Any]) -> JobResult:
     inventory = payload.get("inventory")
     if not isinstance(inventory, dict):
@@ -144,5 +188,6 @@ Handler = Callable[[HomeAssistant, dict[str, Any]], Awaitable[JobResult]]
 _HANDLERS: dict[str, Handler] = {
     "dashboard_proposal": _handle_dashboard,
     "automation_proposal": _handle_automation,
+    "resource_check": _handle_resource_check,
     "rollback": _handle_rollback,
 }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "smartproperty_bootstrap"
-AGENT_VERSION = "0.1.1"
+AGENT_VERSION = "0.1.2"
 
 CONF_CONTROL_PLANE_URL = "control_plane_url"
 CONF_PAIR_CODE = "pair_code"
