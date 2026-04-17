@@ -84,13 +84,32 @@ async def execute_job(
 
 
 async def _handle_dashboard(hass: HomeAssistant, payload: dict[str, Any]) -> JobResult:
-    url_path = payload.get("url_path") or "lovelace"
+    url_path = payload.get("url_path")
     config = payload.get("config")
+    if not isinstance(url_path, str) or not url_path:
+        return JobResult(
+            False,
+            "dashboard_proposal: url_path is required (must be a dedicated slug, not the default).",
+        )
     if not isinstance(config, dict):
         return JobResult(False, "dashboard_proposal: config is required.")
-    await update_dashboard_config(hass, url_path, config)
+
+    title = payload.get("title") if isinstance(payload.get("title"), str) else None
+    icon = payload.get("icon") if isinstance(payload.get("icon"), str) else None
+    require_admin = bool(payload.get("require_admin", False))
+    show_in_sidebar = bool(payload.get("show_in_sidebar", True))
+
+    resolved = await update_dashboard_config(
+        hass,
+        url_path,
+        config,
+        title=title,
+        icon=icon,
+        require_admin=require_admin,
+        show_in_sidebar=show_in_sidebar,
+    )
     return JobResult(
-        True, f"Dashboard '{url_path}' updated.", {"url_path": url_path}
+        True, f"Dashboard '{resolved}' deployed.", {"url_path": resolved}
     )
 
 

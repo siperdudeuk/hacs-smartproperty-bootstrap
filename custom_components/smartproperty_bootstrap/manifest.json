@@ -1,11 +1,11 @@
 {
   "domain": "smartproperty_bootstrap",
   "name": "Smart Property Software Bootstrap",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "config_flow": true,
-  "documentation": "https://github.com/smartpropertysoftware/hacs-smartproperty-bootstrap",
-  "issue_tracker": "https://github.com/smartpropertysoftware/hacs-smartproperty-bootstrap/issues",
-  "codeowners": ["@smartpropertysoftware"],
+  "documentation": "https://github.com/siperdudeuk/hacs-smartproperty-bootstrap",
+  "issue_tracker": "https://github.com/siperdudeuk/hacs-smartproperty-bootstrap/issues",
+  "codeowners": ["@siperdudeuk"],
   "iot_class": "cloud_polling",
   "integration_type": "hub",
   "requirements": []

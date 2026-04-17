@@ -26,33 +26,76 @@ class DeployError(Exception):
 # ── Dashboards ────────────────────────────────────────────────────────
 
 
-async def update_dashboard_config(
-    hass: HomeAssistant, url_path: str | None, config: dict[str, Any]
-) -> None:
-    """Overwrite an existing Lovelace dashboard's config.
+_PROTECTED_URL_PATHS = {None, "", "lovelace"}
 
-    Pass ``url_path=None`` or ``"lovelace"`` for the default overview.
-    v0.1 only updates existing dashboards — the slot must be created in HA
-    by the user before a proposal can target it.
+
+async def update_dashboard_config(
+    hass: HomeAssistant,
+    url_path: str | None,
+    config: dict[str, Any],
+    *,
+    title: str | None = None,
+    icon: str | None = None,
+    require_admin: bool = False,
+    show_in_sidebar: bool = True,
+) -> str:
+    """Create-or-update a Lovelace dashboard, never touching the default.
+
+    - Creates a new storage-mode dashboard if ``url_path`` is not yet registered.
+    - Overwrites the config of an existing dashboard with the same ``url_path``.
+    - Refuses to target the built-in default dashboard (``lovelace``/None): the
+      control plane must always propose a dedicated slug so customer-curated
+      dashboards are never clobbered.
+
+    Returns the resolved ``url_path`` of the affected dashboard.
     """
+    if url_path in _PROTECTED_URL_PATHS:
+        raise DeployError(
+            "Refusing to modify the default Lovelace dashboard. "
+            "Provide a dedicated url_path (e.g. 'ai-generated-dash')."
+        )
+
     lovelace = hass.data.get("lovelace")
     if lovelace is None:
         raise DeployError("Lovelace is not available on this HA instance.")
 
     dashboards = getattr(lovelace, "dashboards", None) or {}
-    key = None if url_path in (None, "", "lovelace") else url_path
+    dashboard = dashboards.get(url_path)
 
-    dashboard = dashboards.get(key)
     if dashboard is None:
-        raise DeployError(
-            f"Dashboard '{url_path or 'overview'}' does not exist. "
-            "Create the dashboard slot in Home Assistant before deploying."
-        )
+        collection = getattr(lovelace, "dashboards_collection", None)
+        if collection is None:
+            raise DeployError(
+                "This HA version does not expose dashboards_collection; "
+                "cannot create new dashboards programmatically."
+            )
+        try:
+            await collection.async_create_item(
+                {
+                    "url_path": url_path,
+                    "title": title or url_path,
+                    "icon": icon or "mdi:view-dashboard",
+                    "require_admin": require_admin,
+                    "show_in_sidebar": show_in_sidebar,
+                    "mode": "storage",
+                }
+            )
+        except Exception as exc:
+            raise DeployError(
+                f"Failed to create dashboard {url_path!r}: {exc}"
+            ) from exc
+        dashboard = getattr(lovelace, "dashboards", {}).get(url_path)
+        if dashboard is None:
+            raise DeployError(
+                f"Dashboard {url_path!r} was created but not registered on hass.data."
+            )
 
     try:
         await dashboard.async_save(config)
     except Exception as exc:
         raise DeployError(f"Failed to save dashboard {url_path!r}: {exc}") from exc
+
+    return url_path
 
 
 # ── Automations ───────────────────────────────────────────────────────
