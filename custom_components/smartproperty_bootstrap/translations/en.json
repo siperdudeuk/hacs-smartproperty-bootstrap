@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Enter the pair code shown in the Smart Property Software admin dashboard.",
+        "data": {
+          "pair_code": "Pair code",
+          "instance_name": "Instance name",
+          "control_plane_url": "Control plane URL"
+        }
+      }
+    },
+    "error": {
+      "pair_failed": "Pairing failed. Check the code and try again.",
+      "unknown": "Unexpected error while pairing."
+    },
+    "abort": {
+      "already_configured": "This Home Assistant instance is already paired."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "poll_interval_seconds": "Job poll interval (seconds)",
+          "sync_interval_seconds": "Inventory sync interval (seconds)"
+        }
+      }
+    }
+  }
+}
