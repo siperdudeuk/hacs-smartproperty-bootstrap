@@ -72,7 +72,7 @@ class ControlPlaneClient:
             timeout=_SYNC_TIMEOUT,
         )
 
-    async def get_pending_jobs(self) -> list[dict[str, Any]]:
+    async def get_pending_jobs(self) -> dict[str, Any]:
         self._require_paired()
         url = f"{self._base_url}/api/ha/agent/jobs"
         params = {"instanceId": self.instance_id, "token": self.token}
@@ -84,7 +84,10 @@ class ControlPlaneClient:
         except Exception as exc:  # aiohttp connection errors, JSON decode, etc.
             raise ControlPlaneError(f"Failed to fetch jobs: {exc}") from exc
         jobs = data.get("jobs", [])
-        return jobs if isinstance(jobs, list) else []
+        return {
+            "jobs": jobs if isinstance(jobs, list) else [],
+            "latest_agent_version": data.get("latestAgentVersion"),
+        }
 
     async def report_job_result(
         self,
