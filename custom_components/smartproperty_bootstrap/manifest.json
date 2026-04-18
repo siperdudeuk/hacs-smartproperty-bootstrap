@@ -1,7 +1,7 @@
 {
   "domain": "smartproperty_bootstrap",
   "name": "Smart Property Software Bootstrap",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "config_flow": true,
   "documentation": "https://github.com/siperdudeuk/hacs-smartproperty-bootstrap",
   "issue_tracker": "https://github.com/siperdudeuk/hacs-smartproperty-bootstrap/issues",

@@ -63,27 +63,14 @@ async def update_dashboard_config(
     dashboard = dashboards.get(url_path)
 
     if dashboard is None:
-        collection = getattr(lovelace, "dashboards_collection", None)
-        if collection is None:
-            raise DeployError(
-                "This HA version does not expose dashboards_collection; "
-                "cannot create new dashboards programmatically."
-            )
-        try:
-            await collection.async_create_item(
-                {
-                    "url_path": url_path,
-                    "title": title or url_path,
-                    "icon": icon or "mdi:view-dashboard",
-                    "require_admin": require_admin,
-                    "show_in_sidebar": show_in_sidebar,
-                    "mode": "storage",
-                }
-            )
-        except Exception as exc:
-            raise DeployError(
-                f"Failed to create dashboard {url_path!r}: {exc}"
-            ) from exc
+        await _create_storage_dashboard(
+            hass,
+            url_path,
+            title=title or url_path,
+            icon=icon or "mdi:view-dashboard",
+            require_admin=require_admin,
+            show_in_sidebar=show_in_sidebar,
+        )
         dashboard = getattr(lovelace, "dashboards", {}).get(url_path)
         if dashboard is None:
             raise DeployError(
@@ -96,6 +83,69 @@ async def update_dashboard_config(
         raise DeployError(f"Failed to save dashboard {url_path!r}: {exc}") from exc
 
     return url_path
+
+
+async def _create_storage_dashboard(
+    hass: HomeAssistant,
+    url_path: str,
+    *,
+    title: str,
+    icon: str,
+    require_admin: bool,
+    show_in_sidebar: bool,
+) -> None:
+    # HA no longer exposes the running DashboardsCollection on hass.data
+    # (2025.x+). Construct our own collection — it shares the same Store
+    # backing file — then wire the new entry into hass.data["lovelace"]
+    # and the panel registry so the dashboard is visible without a restart.
+    try:
+        from homeassistant.components import frontend
+        from homeassistant.components.lovelace import dashboard as ll_dashboard
+    except ImportError as exc:
+        raise DeployError(f"Lovelace internals unavailable: {exc}") from exc
+
+    lovelace = hass.data.get("lovelace")
+    if lovelace is None:
+        raise DeployError("Lovelace is not available on this HA instance.")
+
+    collection = ll_dashboard.DashboardsCollection(hass)
+    try:
+        await collection.async_load()
+    except Exception as exc:
+        raise DeployError(f"Failed to load dashboards collection: {exc}") from exc
+
+    try:
+        item = await collection.async_create_item(
+            {
+                "url_path": url_path,
+                "title": title,
+                "icon": icon,
+                "require_admin": require_admin,
+                "show_in_sidebar": show_in_sidebar,
+                "mode": "storage",
+            }
+        )
+    except Exception as exc:
+        raise DeployError(f"Failed to create dashboard {url_path!r}: {exc}") from exc
+
+    lovelace.dashboards[url_path] = ll_dashboard.LovelaceStorage(hass, item)
+
+    try:
+        frontend.async_register_built_in_panel(
+            hass,
+            "lovelace",
+            sidebar_title=title,
+            sidebar_icon=icon,
+            frontend_url_path=url_path,
+            config={"mode": "storage"},
+            require_admin=require_admin,
+            update=False,
+            show_in_sidebar=show_in_sidebar,
+        )
+    except Exception as exc:
+        raise DeployError(
+            f"Failed to register frontend panel for {url_path!r}: {exc}"
+        ) from exc
 
 
 # ── Automations ───────────────────────────────────────────────────────
