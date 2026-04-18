@@ -33,8 +33,10 @@ def verify_signature(
     signing_secret: str,
 ) -> bool:
     """Verify HMAC-SHA256 signature: sha256(jobId.instanceId.nonce.sha256(payload))."""
+    # ensure_ascii=False matches Node's JSON.stringify byte-for-byte for
+    # non-ASCII characters (e.g. em-dash); without it, sha256 diverges.
     payload_hash = hashlib.sha256(
-        json.dumps(payload, separators=(",", ":")).encode()
+        json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     ).hexdigest()
     message = f"{job_id}.{instance_id}.{nonce}.{payload_hash}"
     expected = hmac.new(
