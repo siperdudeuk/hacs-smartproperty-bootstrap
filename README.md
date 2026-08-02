@@ -70,3 +70,23 @@ After pairing, the integration's **Configure** button lets you change:
 ## License
 
 MIT
+
+---
+
+## AI / MCP Tooling Available
+
+This project can make use of locally available MCP servers stored in:
+
+`~/Coding/_mcp-servers/`
+
+Available MCP tooling includes:
+
+- **Perplexity MCP** — live web research/search for current docs, APIs, competitors, pricing and technical references.
+- **Firecrawl MCP** — website crawling, scraping and structured content extraction.
+- **Glif MCP** — AI media/creative asset workflows where useful.
+- **Chrome DevTools MCP** — browser debugging, console logs, network inspection, page state and performance troubleshooting.
+- **Playwright MCP** — browser automation, UI flow testing, form testing and end-to-end verification.
+
+These tools are not automatically active just because this README mentions them. They must be enabled in the active AI coding client’s MCP configuration before use.
+
+See: `../MCP_SERVERS_AVAILABLE.md`
